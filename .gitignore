@@ -1,0 +1,32 @@
+# Virtual environment
+venv/
+.venv/
+
+# Environment secrets — NEVER commit this
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Test cache
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Uploads — mounted as volume in production
+uploads/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Alembic — keep migrations but not cache
+migrations/__pycache__/

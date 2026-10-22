@@ -1,0 +1,56 @@
+# ------------------------------------------------------------------ #
+#  .dockerignore — files excluded from the Docker build context       #
+#                                                                      #
+#  Smaller build context = faster builds + smaller images.            #
+#  More importantly: secrets and dev files never enter the image.     #
+# ------------------------------------------------------------------ #
+
+# Virtual environment — never copy into Docker image
+venv/
+.venv/
+env/
+
+# Environment files — secrets must never be baked into an image
+.env
+.env.*
+!.env.example
+
+# Git history — not needed in the image
+.git/
+.gitignore
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Test files — not needed in production image
+tests/
+pytest.ini
+.pytest_cache/
+htmlcov/
+.coverage
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Documentation
+*.md
+docs/
+
+# Uploaded files — mounted as a Docker volume instead
+uploads/
+
+# Docker files themselves
+Dockerfile
+docker-compose.yml
+docker-compose.*.yml
+
+# OS files
+.DS_Store
+Thumbs.db

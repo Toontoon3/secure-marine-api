@@ -1,0 +1,131 @@
+# ------------------------------------------------------------------ #
+#  Docker Compose — full local stack                                  #
+#                                                                      #
+#  Starts three containers:                                            #
+#    api       — your FastAPI application                             #
+#    postgres  — PostgreSQL database                                  #
+#    redis     — Redis cache + rate limiter                           #
+#                                                                      #
+#  Run the full stack:                                                 #
+#    docker compose up --build                                         #
+#                                                                      #
+#  Run in background:                                                  #
+#    docker compose up --build -d                                      #
+#                                                                      #
+#  Stop everything:                                                    #
+#    docker compose down                                               #
+#                                                                      #
+#  Stop and delete all data (fresh start):                            #
+#    docker compose down -v                                            #
+# ------------------------------------------------------------------ #
+
+version: "3.9"
+
+services:
+
+  # ---------------------------------------------------------------- #
+  #  FastAPI application                                              #
+  # ---------------------------------------------------------------- #
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: marine-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # Override DATABASE_URL and REDIS_URL to use Docker service names
+      # "postgres" and "redis" resolve to the containers below
+      DATABASE_URL: postgresql://${DB_USER:-marineuser}:${DB_PASSWORD:-marinepass}@postgres:5432/${DB_NAME:-marineapi}
+      REDIS_URL: redis://redis:6379/0
+      ENVIRONMENT: development
+    depends_on:
+      postgres:
+        condition: service_healthy    # wait for postgres to be ready
+      redis:
+        condition: service_healthy    # wait for redis to be ready
+    volumes:
+      - uploads_data:/app/uploads    # persist uploaded files
+    networks:
+      - marine_network
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ---------------------------------------------------------------- #
+  #  PostgreSQL database                                              #
+  # ---------------------------------------------------------------- #
+  postgres:
+    image: postgres:15-alpine
+    container_name: marine-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-marineapi}
+      POSTGRES_USER: ${DB_USER:-marineuser}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-marinepass}
+      # Log slow queries (anything over 1 second)
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - marine_network
+    # No external port exposed — only the api container can reach it
+    # This is a security improvement: the DB is not accessible from
+    # your host machine or the internet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-marineuser} -d ${DB_NAME:-marineapi}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ---------------------------------------------------------------- #
+  #  Redis                                                            #
+  # ---------------------------------------------------------------- #
+  redis:
+    image: redis:7-alpine
+    container_name: marine-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+      --save ""
+    # --save "" disables persistence — rate limit counters and
+    # token blacklist entries are ephemeral by design.
+    # If Redis restarts, counters reset — acceptable tradeoff.
+    volumes:
+      - redis_data:/data
+    networks:
+      - marine_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# ------------------------------------------------------------------ #
+#  Volumes — persist data across container restarts                   #
+# ------------------------------------------------------------------ #
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  uploads_data:
+    driver: local
+
+# ------------------------------------------------------------------ #
+#  Network — containers communicate on an isolated bridge network     #
+# ------------------------------------------------------------------ #
+networks:
+  marine_network:
+    driver: bridge

@@ -1,0 +1,2 @@
+$env:TESTING="true"
+pytest
