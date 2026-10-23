@@ -85,8 +85,9 @@ class Settings(BaseSettings):
     #  CORS — origins allowed to call this API                            #
     # ------------------------------------------------------------------ #
     ALLOWED_ORIGINS: List[str] = [
-        "http://localhost:3000",   # local frontend dev
+        "http://localhost:3000",
         "http://localhost:8080",
+        "https://marine-dashboard-swart.vercel.app/",  # add your Vercel URL
     ]
 
     # ------------------------------------------------------------------ #
