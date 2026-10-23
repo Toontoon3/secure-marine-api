@@ -87,7 +87,7 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: List[str] = [
         "http://localhost:3000",
         "http://localhost:8080",
-        "https://marine-dashboard-swart.vercel.app/",  # add your Vercel URL
+        "https://marine-dashboard-swart.vercel.app",  # add your Vercel URL
     ]
 
     # ------------------------------------------------------------------ #
